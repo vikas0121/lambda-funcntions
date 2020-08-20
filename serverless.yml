@@ -26,6 +26,10 @@ provider:
   profile: serverless-admin
   region: ap-southeast-2
 
+  apiGateway:
+    binaryMediaTypes:
+      - "application/pdf"
+
 # you can overwrite defaults here
 #  stage: dev
 #  region: us-east-1
@@ -62,8 +66,18 @@ provider:
 functions:
   hello:
     handler: functions/hello-world.hello
+    events:
+      - http:
+          path: hello
+          method: get
+          cors: true
   generate-pdf:
     handler: functions/pdf.generatePdf
+    events:
+      - http:
+          path: puppeteer/pdf
+          method: get
+          cors: true
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
 #    Check the event documentation for details

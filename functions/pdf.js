@@ -3,36 +3,38 @@ const chromium = require('chrome-aws-lambda');
 const puppeteer = require('puppeteer-core');
 const { cors, doNotWaitForEmptyEventLoop, httpHeaderNormalizer, httpErrorHandler } = require('middy/middlewares');
 
-const handler = async event => {
-  const executablePath = event.isOffline
-    ? './node_modules/puppeteer/.local-chromium/mac-674921/chrome-mac/Chromium.app/Contents/MacOS/Chromium'
-    : await chromium.executablePath;
+module.exports.generatePdf = async event => {
 
-  const browser = await puppeteer.launch({
-    args: chromium.args,
-    executablePath
-  });
+  const data = JSON.parse(event.body)
 
-  const page = await browser.newPage();
+  const { htmlString, options } = data
+  const { format = 'A4', margin = { top: 5 }, printBackground = true } = options
 
-  await page.goto("https://www.google.com", {
-    waitUntil: ["networkidle0", "load", "domcontentloaded"]
-  });
+  const browser = await puppeteer.launch()
+  const page = await browser.newPage()
+  await page.setContent(htmlString, { waitUntil: 'networkidle0' })
 
-  const pdfStream = await page.pdf();
+  const pdfOptions = {
+    format,
+    margin,
+    printBackground
+  }
 
+  const pdfBuffer = await page.pdf(pdfOptions)
+
+  await browser.close()
   return {
     statusCode: 200,
     isBase64Encoded: true,
     headers: {
-      "Content-type": "application/pdf"
+      'Content-type': 'application/pdf'
     },
-    body: pdfStream.toString("base64")
-  };
-};
+    body: pdfBuffer.toString('base64')
+  }
+}
 
-export const generate = middy(handler)
-  .use(httpHeaderNormalizer())
-  .use(cors())
-  .use(doNotWaitForEmptyEventLoop())
-  .use(httpErrorHandler())
+// module.exports.generate = middy(handler)
+//   .use(httpHeaderNormalizer())
+//   .use(cors())
+//   .use(doNotWaitForEmptyEventLoop())
+//   .use(httpErrorHandler())
